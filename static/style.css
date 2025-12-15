@@ -1,0 +1,24 @@
+body {
+    font-family: 'Press Start 2P', cursive, Arial;
+    background: linear-gradient(180deg, #111, #333);
+    color: #0f0;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+h1, h2 {
+    color: #ff0;
+    text-shadow: 2px 2px #000;
+}
+
+button {
+    font-family: inherit;
+    background: #222;
+    color: #0f0;
+    border: 3px solid #0f0;
+    padding: 10px 20px;
+    margin: 10px;
+    cursor: pointer;
+    transition: 0
+}

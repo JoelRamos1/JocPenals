@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Menú inicial</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>⚽ PENAL GAME ⚽</h1>
+    <p>Selecciona el teu rol:</p>
+    <form action="{{ url_for('jugador1') }}">
+        <button type="submit">🎮 Jugador 1</button>
+    </form>
+    <form action="{{ url_for('jugador2') }}">
+        <button type="submit">🎮 Jugador 2</button>
+    </form>
+    <form action="{{ url_for('resultat') }}">
+        <button type="submit">📊 Veure resultat</button>
+    </form>
+</body>
+</html>

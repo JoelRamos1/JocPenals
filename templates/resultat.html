@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resultat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>📊 RESULTAT FINAL</h1>
+    {% if not jugades.jugador1 or not jugades.jugador2 %}
+        <p>⚠️ Encara falta que algun jugador jugui.</p>
+    {% else %}
+        <p>Porter Jugador 1: {{punts_j1}} punts</p>
+        <p>Porter Jugador 2: {{punts_j2}} punts</p>
+        <h2>🏆 {{guanyador}}</h2>
+    {% endif %}
+    <form action="{{ url_for('reset') }}"><button>🔄 Nova partida</button></form>
+    <form action="{{ url_for('menu') }}"><button>🏠 Tornar al menú</button></form>
+</body>
+</html>

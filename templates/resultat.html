@@ -1,19 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Resultat</title>
+    <title>Resultat – Partida {{ codi }}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>📊 RESULTAT FINAL</h1>
-    {% if not jugades.jugador1 or not jugades.jugador2 %}
-        <p>⚠️ Encara falta que algun jugador jugui.</p>
-    {% else %}
-        <p>Porter Jugador 1: {{punts_j1}} punts</p>
-        <p>Porter Jugador 2: {{punts_j2}} punts</p>
-        <h2>🏆 {{guanyador}}</h2>
-    {% endif %}
-    <form action="{{ url_for('reset') }}"><button>🔄 Nova partida</button></form>
-    <form action="{{ url_for('menu') }}"><button>🏠 Tornar al menú</button></form>
+
+<div class="main">
+    <h1>Marcador de la partida</h1>
+    <p class="subtitle">Codi: {{ codi }}</p>
+
+    <div id="scoreboard" class="scoreboard">
+        <div class="team">
+            <span class="team-name">Jugador 1</span>
+            <span id="score_j1" class="team-score">0</span>
+        </div>
+        <div class="team">
+            <span class="team-name">Jugador 2</span>
+            <span id="score_j2" class="team-score">0</span>
+        </div>
+    </div>
+
+    <p id="progress_text" class="info">Carregant estat de la partida...</p>
+    <p id="winner_text" class="winner" style="display:none;"></p>
+
+    <h2>Detall de sets</h2>
+    <div id="set_container" class="set-grid">
+        <!-- Targetes de sets generades per JS -->
+    </div>
+
+    <p id="no_sets" class="muted" style="display:none;">Encara no s’ha jugat cap set.</p>
+
+    <div class="nav">
+        <form action="{{ url_for('seleccio', codi=codi) }}"><button type="submit" class="secondary">Tornar a selecció</button></form>
+        <form action="{{ url_for('reset', codi=codi) }}"><button type="submit">Reiniciar partida</button></form>
+        <form action="{{ url_for('menu') }}"><button type="submit" class="ghost">Menú inicial</button></form>
+    </div>
+</div>
+
+<script>
+async function refrescarMarcador() {
+    try {
+        const res = await fetch("{{ url_for('api_estat', codi=codi) }}");
+        if (!res.ok) {
+            document.getElementById("progress_text").innerText = "Error carregant l'estat de la partida.";
+            return;
+        }
+        const data = await res.json();
+
+        // Actualitzar marcador global
+        document.getElementById("score_j1").innerText = data.vict_j1;
+        document.getElementById("score_j2").innerText = data.vict_j2;
+
+        // Text de progrés / final
+        const progress = document.getElementById("progress_text");
+        const winner = document.getElementById("winner_text");
+
+        if (data.finalitzat) {
+            progress.innerText = `Partida finalitzada. Sets jugats: ${data.sets.length} / ${data.total_sets}`;
+            if (data.guanyador_text) {
+                winner.innerText = data.guanyador_text;
+                winner.style.display = "block";
+            }
+        } else {
+            progress.innerText = `Partida en joc. Sets jugats: ${data.sets.length} / ${data.total_sets}`;
+            winner.style.display = "none";
+        }
+
+        // Targetes de sets
+        const cont = document.getElementById("set_container");
+        cont.innerHTML = "";
+
+        if (data.sets.length === 0) {
+            document.getElementById("no_sets").style.display = "block";
+        } else {
+            document.getElementById("no_sets").style.display = "none";
+        }
+
+        data.sets.forEach((s, i) => {
+            // Classes per als punts tipus penals
+            let j1DotClass = "draw";
+            let j2DotClass = "draw";
+            if (s.guanyador === "jugador1") {
+                j1DotClass = "win";
+                j2DotClass = "lose";
+            } else if (s.guanyador === "jugador2") {
+                j1DotClass = "lose";
+                j2DotClass = "win";
+            }
+
+            const card = document.createElement("div");
+            card.className = "set-card";
+            card.innerHTML = `
+                <div class="set-header">Set ${i + 1}</div>
+                <div class="set-body">
+                    <div class="set-row">
+                        <span>Jugador 1</span>
+                        <span>${s.punts_j1}</span>
+                    </div>
+                    <div class="set-row">
+                        <span>Jugador 2</span>
+                        <span>${s.punts_j2}</span>
+                    </div>
+                </div>
+                <div class="penalty-dots">
+                    <span class="dot ${j1DotClass}"></span>
+                    <span class="dot ${j2DotClass}"></span>
+                </div>
+            `;
+            cont.appendChild(card);
+        });
+
+    } catch (e) {
+        console.error(e);
+        document.getElementById("progress_text").innerText = "Error de connexió amb el servidor.";
+    }
+}
+
+// Refrescar cada 1.5 segons
+refrescarMarcador();
+setInterval(refrescarMarcador, 1500);
+</script>
+
 </body>
 </html>

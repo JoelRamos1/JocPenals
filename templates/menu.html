@@ -2,19 +2,35 @@
 <html>
 <head>
     <title>Menú inicial</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>⚽ PENAL GAME ⚽</h1>
-    <p>Selecciona el teu rol:</p>
-    <form action="{{ url_for('jugador1') }}">
-        <button type="submit">🎮 Jugador 1</button>
+<div class="main">
+    <h1>Penalty Duel</h1>
+    <p class="subtitle">Crea una partida o uneix-te amb un codi.</p>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" class="card">
+        <h2>Crear partida nova</h2>
+        <label>Nombre de sets</label>
+        <select name="sets">
+            <option value="3">3 sets</option>
+            <option value="4">4 sets</option>
+            <option value="5">5 sets</option>
+        </select>
+        <button type="submit" name="accio" value="crear">Crear partida</button>
     </form>
-    <form action="{{ url_for('jugador2') }}">
-        <button type="submit">🎮 Jugador 2</button>
+
+    <form method="post" class="card">
+        <h2>Unir-se a partida</h2>
+        <input type="text" name="codi" placeholder="Introdueix codi de partida" required>
+        <button type="submit" name="accio" value="unir">Unir-se</button>
     </form>
-    <form action="{{ url_for('resultat') }}">
-        <button type="submit">📊 Veure resultat</button>
-    </form>
+</div>
 </body>
 </html>

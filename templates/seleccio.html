@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Selecciona jugador</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="main">
+    <h1>Partida: {{ codi }}</h1>
+    <p class="subtitle">Sets jugats: {{ sets_jugats }} / {{ total_sets }}</p>
+
+    <div class="button-row">
+        <form action="{{ url_for('jugador1', codi=codi) }}">
+            <button type="submit">Entrar com Jugador 1</button>
+        </form>
+        <form action="{{ url_for('jugador2', codi=codi) }}">
+            <button type="submit">Entrar com Jugador 2</button>
+        </form>
+    </div>
+
+    <form action="{{ url_for('resultat', codi=codi) }}">
+        <button type="submit" class="secondary">Veure marcador</button>
+    </form>
+
+    <form action="{{ url_for('menu') }}">
+        <button type="submit" class="ghost">Tornar al menú</button>
+    </form>
+</div>
+</body>
+</html>

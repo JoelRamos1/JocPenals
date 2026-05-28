@@ -5,12 +5,10 @@ from flask import Flask, request, redirect, url_for, render_template, jsonify
 app = Flask(__name__)
 
 # partides[codi] = {
-#   "jugador1": {"xut": (...), "aturada": (...)} o None,
-#   "jugador2": {...} o None,
-#   "sets": [ {"guanyador": "jugador1"/"jugador2"/"empat",
-#              "punts_j1": int,
-#              "punts_j2": int} ],
-#   "total_sets": int
+#   "jugador1": [{"xut": (h,d), "aturada": (h,d)}, ...],  # sets jugats
+#   "jugador2": [{"xut": (h,d), "aturada": (h,d)}, ...],
+#   "total_sets": int,
+#   "resultats": None | [{"guanyador": ..., "punts_j1": int, "punts_j2": int}, ...]
 # }
 
 partides = {}
@@ -32,6 +30,27 @@ def calcular_punts(xut, aturada):
     return punts
 
 
+def resoldre_resultats(j1_sets, j2_sets):
+    resultats = []
+    for i in range(min(len(j1_sets), len(j2_sets))):
+        j1 = j1_sets[i]
+        j2 = j2_sets[i]
+        punts_j1 = calcular_punts(j2["xut"], j1["aturada"])
+        punts_j2 = calcular_punts(j1["xut"], j2["aturada"])
+        if punts_j1 > punts_j2:
+            guanyador = "jugador1"
+        elif punts_j2 > punts_j1:
+            guanyador = "jugador2"
+        else:
+            guanyador = "empat"
+        resultats.append({
+            "guanyador": guanyador,
+            "punts_j1": punts_j1,
+            "punts_j2": punts_j2
+        })
+    return resultats
+
+
 @app.route("/", methods=["GET", "POST"])
 def menu():
     error = None
@@ -42,10 +61,10 @@ def menu():
             codi = generar_codi()
             total_sets = int(request.form["sets"])
             partides[codi] = {
-                "jugador1": None,
-                "jugador2": None,
-                "sets": [],
-                "total_sets": total_sets
+                "jugador1": [],
+                "jugador2": [],
+                "total_sets": total_sets,
+                "resultats": None
             }
             return redirect(url_for("seleccio", codi=codi))
 
@@ -64,12 +83,12 @@ def seleccio(codi):
     partida = partides.get(codi)
     if not partida:
         return redirect(url_for("menu"))
-    sets_jugats = len(partida["sets"])
     total = partida["total_sets"]
     return render_template(
         "seleccio.html",
         codi=codi,
-        sets_jugats=sets_jugats,
+        sets_j1=len(partida["jugador1"]),
+        sets_j2=len(partida["jugador2"]),
         total_sets=total
     )
 
@@ -89,65 +108,31 @@ def gestionar_jugada(codi, jugador):
     if not partida:
         return redirect(url_for("menu"))
 
-    error = None
-    jugada = partida[jugador]
-    sets_jugats = len(partida["sets"])
     total_sets = partida["total_sets"]
+    sets_actual = len(partida[jugador])
 
-    # Si ja s'han jugat tots els sets, anem directament al resultat
-    if sets_jugats >= total_sets:
+    # Si ja ha jugat tots els sets, va al resultat
+    if sets_actual >= total_sets:
         return redirect(url_for("resultat", codi=codi))
 
     if request.method == "POST":
-        if jugada is not None:
-            error = "Ja has enviat la teva jugada en aquest set."
-        else:
-            xut = (request.form["xut_alçada"], request.form["xut_direccio"])
-            aturada = (request.form["aturada_alçada"], request.form["aturada_direccio"])
-            partida[jugador] = {"xut": xut, "aturada": aturada}
-            jugada = partida[jugador]
+        xut = (request.form["xut_alçada"], request.form["xut_direccio"])
+        aturada = (request.form["aturada_alçada"], request.form["aturada_direccio"])
+        partida[jugador].append({"xut": xut, "aturada": aturada})
+        sets_actual += 1
 
-        # Si tots dos han jugat, tanquem el set
-        if partida["jugador1"] and partida["jugador2"]:
-            j1 = partida["jugador1"]
-            j2 = partida["jugador2"]
+        # Si ja ha acabat tots els sets, va al resultat
+        if sets_actual >= total_sets:
+            return redirect(url_for("resultat", codi=codi))
 
-            punts_j1 = calcular_punts(j2["xut"], j1["aturada"])
-            punts_j2 = calcular_punts(j1["xut"], j2["aturada"])
-
-            if punts_j1 > punts_j2:
-                guanyador = "jugador1"
-            elif punts_j2 > punts_j1:
-                guanyador = "jugador2"
-            else:
-                guanyador = "empat"
-
-            partida["sets"].append({
-                "guanyador": guanyador,
-                "punts_j1": punts_j1,
-                "punts_j2": punts_j2
-            })
-
-            # Preparem següent set
-            partida["jugador1"] = None
-            partida["jugador2"] = None
-
-            # Si hem arribat al límit de sets, anem a resultat
-            if len(partida["sets"]) >= partida["total_sets"]:
-                return redirect(url_for("resultat", codi=codi))
-
-            # Sinó, el jugador pot seguir amb el següent set: redirigim
-            return redirect(url_for(jugador, codi=codi))
+        return redirect(url_for(jugador, codi=codi))
 
     return render_template(
         "jugador.html",
         jugador=jugador,
         alçades=ALÇADES,
         direccions=DIRECCIONS,
-        jugada=jugada,
-        error=error,
-        codi=codi,
-        set_actual=sets_jugats + 1,
+        set_actual=sets_actual + 1,
         total_sets=total_sets
     )
 
@@ -168,10 +153,10 @@ def reset(codi):
     if partida:
         total_sets = partida["total_sets"]
         partides[codi] = {
-            "jugador1": None,
-            "jugador2": None,
-            "sets": [],
-            "total_sets": total_sets
+            "jugador1": [],
+            "jugador2": [],
+            "total_sets": total_sets,
+            "resultats": None
         }
     return redirect(url_for("seleccio", codi=codi))
 
@@ -182,23 +167,37 @@ def api_estat(codi):
     if not partida:
         return jsonify({"error": "Partida no trobada"}), 404
 
-    sets = partida["sets"]
     total_sets = partida["total_sets"]
+    j1_fet = len(partida["jugador1"]) >= total_sets
+    j2_fet = len(partida["jugador2"]) >= total_sets
 
-    vict_j1 = sum(1 for s in sets if s["guanyador"] == "jugador1")
-    vict_j2 = sum(1 for s in sets if s["guanyador"] == "jugador2")
+    if j1_fet and j2_fet and partida["resultats"] is None:
+        partida["resultats"] = resoldre_resultats(partida["jugador1"], partida["jugador2"])
 
-    if len(sets) < total_sets:
-        finalitzat = False
-        guanyador_text = None
-    else:
-        finalitzat = True
+    sets = partida["resultats"] if partida["resultats"] is not None else []
+    finalitzat = partida["resultats"] is not None
+
+    vict_j1 = sum(1 for s in sets if s["guanyador"] == "jugador1") if sets else 0
+    vict_j2 = sum(1 for s in sets if s["guanyador"] == "jugador2") if sets else 0
+
+    if finalitzat:
         if vict_j1 > vict_j2:
             guanyador_text = "Guanya el Jugador 1!"
         elif vict_j2 > vict_j1:
             guanyador_text = "Guanya el Jugador 2!"
         else:
             guanyador_text = "Empat final!"
+    else:
+        guanyador_text = None
+
+    if j1_fet and j2_fet:
+        estat_text = "Partida finalitzada!"
+    elif j1_fet:
+        estat_text = "Jugador 1 ha acabat. Esperant Jugador 2..."
+    elif j2_fet:
+        estat_text = "Jugador 2 ha acabat. Esperant Jugador 1..."
+    else:
+        estat_text = "Tots dos jugadors estan jugant..."
 
     return jsonify({
         "sets": sets,
@@ -206,7 +205,10 @@ def api_estat(codi):
         "vict_j1": vict_j1,
         "vict_j2": vict_j2,
         "finalitzat": finalitzat,
-        "guanyador_text": guanyador_text
+        "guanyador_text": guanyador_text,
+        "estat_text": estat_text,
+        "j1_fet": j1_fet,
+        "j2_fet": j2_fet
     })
 
 

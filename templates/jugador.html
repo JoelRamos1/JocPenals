@@ -11,11 +11,6 @@
 <div class="main">
     <h1>{{ jugador|capitalize }} – Set {{ set_actual }} / {{ total_sets }}</h1>
 
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
-
-    {% if not jugada %}
     <form method="post" class="card">
         <h2>Xut</h2>
         <div class="field-row">
@@ -39,29 +34,11 @@
 
         <button type="submit">Enviar jugada</button>
     </form>
-    {% else %}
-        <p class="info">Ja has enviat la teva jugada per aquest set. Pots esperar que l’altre jugador la faci.</p>
-    {% endif %}
 
     <div class="nav">
-        {% if jugador == "jugador1" %}
-            <form action="{{ url_for('jugador2', codi=codi) }}"><button type="submit" class="secondary">Anar a Jugador 2</button></form>
-        {% else %}
-            <form action="{{ url_for('jugador1', codi=codi) }}"><button type="submit" class="secondary">Anar a Jugador 1</button></form>
-        {% endif %}
         <form action="{{ url_for('resultat', codi=codi) }}"><button type="submit" class="secondary">Veure marcador</button></form>
         <form action="{{ url_for('seleccio', codi=codi) }}"><button type="submit" class="ghost">Tornar a selecció</button></form>
     </div>
-</div>
-
-<div class="sidebar">
-    <h2>La teva jugada actual</h2>
-    {% if jugada %}
-        <p><strong>Xut:</strong> {{ jugada.xut[0] }} – {{ jugada.xut[1] }}</p>
-        <p><strong>Aturada:</strong> {{ jugada.aturada[0] }} – {{ jugada.aturada[1] }}</p>
-    {% else %}
-        <p class="muted">Encara no has enviat la jugada d’aquest set.</p>
-    {% endif %}
 </div>
 
 </body>

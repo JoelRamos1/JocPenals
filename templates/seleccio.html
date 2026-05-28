@@ -9,7 +9,7 @@
 <body>
 <div class="main">
     <h1>Partida: {{ codi }}</h1>
-    <p class="subtitle">Sets jugats: {{ sets_jugats }} / {{ total_sets }}</p>
+    <p class="subtitle">J1: {{ sets_j1 }}/{{ total_sets }} sets — J2: {{ sets_j2 }}/{{ total_sets }} sets</p>
 
     <div class="button-row">
         <form action="{{ url_for('jugador1', codi=codi) }}">

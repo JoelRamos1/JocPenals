@@ -1,7 +1,7 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Resultat – Partida {{ codi }}</title>
+    <title>Resultat â€“ Partida {{ codi }}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -26,17 +26,17 @@
     <p id="progress_text" class="info">Carregant estat de la partida...</p>
     <p id="winner_text" class="winner" style="display:none;"></p>
 
-    <h2>Detall de sets</h2>
+    <h2 id="sets_header" style="display:none;">Detall de sets</h2>
     <div id="set_container" class="set-grid">
         <!-- Targetes de sets generades per JS -->
     </div>
 
-    <p id="no_sets" class="muted" style="display:none;">Encara no s’ha jugat cap set.</p>
+    <p id="no_sets" class="muted" style="display:none;">Esperant l'altre jugador...</p>
 
     <div class="nav">
-        <form action="{{ url_for('seleccio', codi=codi) }}"><button type="submit" class="secondary">Tornar a selecció</button></form>
+        <form action="{{ url_for('seleccio', codi=codi) }}"><button type="submit" class="secondary">Tornar a selecciÃ³</button></form>
         <form action="{{ url_for('reset', codi=codi) }}"><button type="submit">Reiniciar partida</button></form>
-        <form action="{{ url_for('menu') }}"><button type="submit" class="ghost">Menú inicial</button></form>
+        <form action="{{ url_for('menu') }}"><button type="submit" class="ghost">MenÃº inicial</button></form>
     </div>
 </div>
 
@@ -54,29 +54,36 @@ async function refrescarMarcador() {
         document.getElementById("score_j1").innerText = data.vict_j1;
         document.getElementById("score_j2").innerText = data.vict_j2;
 
-        // Text de progrés / final
+        // Text de progrÃ©s / final
         const progress = document.getElementById("progress_text");
         const winner = document.getElementById("winner_text");
 
+        progress.innerText = data.estat_text || "Carregant...";
+
         if (data.finalitzat) {
-            progress.innerText = `Partida finalitzada. Sets jugats: ${data.sets.length} / ${data.total_sets}`;
             if (data.guanyador_text) {
                 winner.innerText = data.guanyador_text;
                 winner.style.display = "block";
             }
         } else {
-            progress.innerText = `Partida en joc. Sets jugats: ${data.sets.length} / ${data.total_sets}`;
             winner.style.display = "none";
         }
 
         // Targetes de sets
         const cont = document.getElementById("set_container");
+        const setsHeader = document.getElementById("sets_header");
         cont.innerHTML = "";
 
-        if (data.sets.length === 0) {
-            document.getElementById("no_sets").style.display = "block";
+        if (data.finalitzat) {
+            setsHeader.style.display = "block";
+            if (data.sets.length === 0) {
+                document.getElementById("no_sets").style.display = "block";
+            } else {
+                document.getElementById("no_sets").style.display = "none";
+            }
         } else {
-            document.getElementById("no_sets").style.display = "none";
+            setsHeader.style.display = "none";
+            document.getElementById("no_sets").style.display = "block";
         }
 
         data.sets.forEach((s, i) => {
@@ -115,7 +122,7 @@ async function refrescarMarcador() {
 
     } catch (e) {
         console.error(e);
-        document.getElementById("progress_text").innerText = "Error de connexió amb el servidor.";
+        document.getElementById("progress_text").innerText = "Error de connexiÃ³ amb el servidor.";
     }
 }
 

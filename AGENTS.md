@@ -46,3 +46,4 @@ README.md
 - Scoring: both height and direction must match the opponent's shot to earn points.
 - No database — all data lost on server restart.
 - The `resultat.html` page uses `setInterval(refrescarMarcador, 1500)` for live updates.
+- **Game flow**: each player plays all their sets sequentially (no alternating). Results are calculated only after both players finish all sets.

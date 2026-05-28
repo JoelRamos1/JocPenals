@@ -258,6 +258,142 @@ form {
     margin-bottom: 16px;
 }
 
+/* Menú principal (estil joc) */
+.menu-page {
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.menu-hero {
+    text-align: center;
+    padding: 10px 0 24px;
+}
+
+.menu-ball {
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 8px;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4));
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.menu-title {
+    font-size: 40px !important;
+    letter-spacing: 3px !important;
+    margin-bottom: 10px !important;
+    text-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
+    animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { text-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
+    50% { text-shadow: 0 0 50px rgba(245, 158, 11, 0.5); }
+}
+
+.menu-tagline {
+    font-size: 16px;
+    color: #fbbf24;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin: 0;
+    opacity: 0.85;
+}
+
+.menu-card {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 28px 22px 30px;
+}
+
+.menu-card-create {
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.06), var(--glow);
+}
+
+.menu-card-join {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.menu-card-icon {
+    font-size: 40px;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.menu-card h2 {
+    margin-top: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+    color: var(--text);
+    font-weight: 800;
+    letter-spacing: 1px;
+    font-size: 18px;
+}
+
+.menu-card-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 4px 0 16px;
+}
+
+.menu-card label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.menu-card select,
+.menu-card input {
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 12px;
+}
+
+/* Codi copiable */
+.copy-code {
+    cursor: pointer;
+    user-select: all;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.copy-code:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.copy-code::after {
+    content: '📋';
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.copy-code:hover::after {
+    transform: scale(1.2);
+}
+
+.copy-code.copied::after {
+    content: '✅';
+    transform: none;
+}
+
 /* Missatges */
 .error {
     color: var(--danger);

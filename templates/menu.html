@@ -7,29 +7,36 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="main">
-    <h1>Duel de penals</h1>
-    <p class="subtitle">Crea una partida o uneix-te amb un codi.</p>
+<div class="main menu-page">
+    <div class="menu-hero">
+        <div class="menu-ball">⚽</div>
+        <h1 class="menu-title">Duel de penals</h1>
+        <p class="menu-tagline">Lança i atura — el millor guanya</p>
+    </div>
 
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
 
-    <form method="post" class="card">
-        <h2>Crear partida nova</h2>
+    <form method="post" class="menu-card menu-card-create">
+        <div class="menu-card-icon">🏟️</div>
+        <h2>Crear partida</h2>
+        <p class="menu-card-desc">Tria els sets i obre la sala</p>
         <label>Nombre de sets</label>
         <select name="sets">
             <option value="3">3 sets</option>
             <option value="4">4 sets</option>
             <option value="5">5 sets</option>
         </select>
-        <button type="submit" name="accio" value="crear">Crear partida</button>
+        <button type="submit" name="accio" value="crear">Començar el duel</button>
     </form>
 
-    <form method="post" class="card">
-        <h2>Unir-se a partida</h2>
-        <input type="text" name="codi" placeholder="Introdueix codi de partida" required>
-        <button type="submit" name="accio" value="unir">Unir-se</button>
+    <form method="post" class="menu-card menu-card-join">
+        <div class="menu-card-icon">🔗</div>
+        <h2>Unir-se</h2>
+        <p class="menu-card-desc">Entra amb el codi d'un amic</p>
+        <input type="text" name="codi" placeholder="Codi de partida" required>
+        <button type="submit" name="accio" value="unir">Unir-se al duel</button>
     </form>
 </div>
 </body>

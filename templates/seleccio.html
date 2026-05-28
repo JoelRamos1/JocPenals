@@ -8,8 +8,11 @@
 </head>
 <body>
 <div class="main">
-    <h1>Partida: {{ codi }}</h1>
-    <p class="subtitle">Sets jugats: {{ sets_jugats }} / {{ total_sets }}</p>
+    <h1>Partida</h1>
+    <p class="subtitle">
+        Codi: <span class="copy-code" onclick="copiarCodi(this)" data-codi="{{ codi }}">{{ codi }}</span>
+        &middot; Sets jugats: {{ sets_jugats }} / {{ total_sets }}
+    </p>
 
     {% if session.get('rol') and session.get('codi') == codi %}
         <p class="info">✅ Ets {{ session.rol|capitalize }}</p>
@@ -34,5 +37,14 @@
         <button type="submit" class="ghost">Tornar al menú</button>
     </form>
 </div>
+<script>
+async function copiarCodi(el) {
+    try {
+        await navigator.clipboard.writeText(el.dataset.codi);
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 1500);
+    } catch {}
+}
+</script>
 </body>
 </html>

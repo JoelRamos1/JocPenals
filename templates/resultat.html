@@ -10,7 +10,9 @@
 
 <div class="main">
     <h1>Marcador de la partida</h1>
-    <p class="subtitle">Codi: {{ codi }}</p>
+    <p class="subtitle">
+        Codi: <span class="copy-code" onclick="copiarCodi(this)" data-codi="{{ codi }}">{{ codi }}</span>
+    </p>
 
     <div id="scoreboard" class="scoreboard">
         <div class="team">
@@ -141,5 +143,14 @@ source.addEventListener("error", () => {
 });
 </script>
 
+<script>
+async function copiarCodi(el) {
+    try {
+        await navigator.clipboard.writeText(el.dataset.codi);
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 1500);
+    } catch {}
+}
+</script>
 </body>
 </html>

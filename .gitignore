@@ -31,3 +31,4 @@ session-*.md
 
 # Visual Studio Code workspace files (not settings)
 *.code-workspace
+__pycache__/app.cpython-314.pyc

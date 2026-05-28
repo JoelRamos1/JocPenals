@@ -1,0 +1,15 @@
+[Unit]
+Description=Duel de Penals
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/dueldepenals
+Environment=SECRET_KEY=canvia-aquesta-clau
+ExecStart=/opt/dueldepenals/venv/bin/waitress-serve --port=5000 app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

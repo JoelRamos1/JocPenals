@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import secrets
 import string
@@ -7,7 +8,7 @@ from flask import (Flask, request, redirect, url_for, render_template,
                    jsonify, session, stream_with_context, Response)
 
 app = Flask(__name__)
-app.secret_key = "jocpenals-secret-2024"
+app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
 # partides[codi] = {
 #   "jugador1": {"xut": (h,d), "aturada": (h,d)} o None,
@@ -311,4 +312,5 @@ def api_stream(codi):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
+    dev = os.environ.get("FLASK_ENV") == "development"
+    app.run(host="0.0.0.0", port=5000, debug=dev, threaded=True)

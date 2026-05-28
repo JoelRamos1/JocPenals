@@ -9,13 +9,19 @@
 <body>
 <div class="main">
     <h1>Partida: {{ codi }}</h1>
-    <p class="subtitle">J1: {{ sets_j1 }}/{{ total_sets }} sets — J2: {{ sets_j2 }}/{{ total_sets }} sets</p>
+    <p class="subtitle">Sets jugats: {{ sets_jugats }} / {{ total_sets }}</p>
+
+    {% if session.get('rol') and session.get('codi') == codi %}
+        <p class="info">✅ Ets {{ session.rol|capitalize }}</p>
+    {% endif %}
 
     <div class="button-row">
-        <form action="{{ url_for('jugador1', codi=codi) }}">
+        <form method="post">
+            <input type="hidden" name="rol" value="jugador1">
             <button type="submit">Entrar com Jugador 1</button>
         </form>
-        <form action="{{ url_for('jugador2', codi=codi) }}">
+        <form method="post">
+            <input type="hidden" name="rol" value="jugador2">
             <button type="submit">Entrar com Jugador 2</button>
         </form>
     </div>

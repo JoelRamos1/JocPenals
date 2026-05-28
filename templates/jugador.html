@@ -11,29 +11,120 @@
 <div class="main">
     <h1>{{ jugador|capitalize }} – Set {{ set_actual }} / {{ total_sets }}</h1>
 
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    {% if not jugada %}
     <form method="post" class="card">
-        <h2>Xut</h2>
-        <div class="field-row">
-            <select name="xut_alçada">
-                {% for a in alçades %}<option value="{{a}}">{{a}}</option>{% endfor %}
-            </select>
-            <select name="xut_direccio">
-                {% for d in direccions %}<option value="{{d}}">{{d}}</option>{% endfor %}
-            </select>
+        <div class="goal-container">
+            <div class="goal">
+                <h2 class="goal-title">⚽ Xut</h2>
+                <div class="goal-area">
+                    <div class="goal-frame">
+                        <div class="goal-grid" data-target="shot">
+                            {% for a in alçades|reverse %}
+                                {% for d in direccions %}
+                                    <div class="goal-cell" data-alçada="{{ a }}" data-direccio="{{ d }}"></div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="goal-labels-v">
+                        {% for a in alçades|reverse %}
+                            <span>{{ a }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="goal-labels-h">
+                    {% for d in direccions %}
+                        <span>{{ d }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="goal">
+                <h2 class="goal-title">🧤 Aturada</h2>
+                <div class="goal-area">
+                    <div class="goal-frame">
+                        <div class="goal-grid" data-target="save">
+                            {% for a in alçades|reverse %}
+                                {% for d in direccions %}
+                                    <div class="goal-cell" data-alçada="{{ a }}" data-direccio="{{ d }}"></div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="goal-labels-v">
+                        {% for a in alçades|reverse %}
+                            <span>{{ a }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="goal-labels-h">
+                    {% for d in direccions %}
+                        <span>{{ d }}</span>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
 
-        <h2>Aturada</h2>
-        <div class="field-row">
-            <select name="aturada_alçada">
-                {% for a in alçades %}<option value="{{a}}">{{a}}</option>{% endfor %}
-            </select>
-            <select name="aturada_direccio">
-                {% for d in direccions %}<option value="{{d}}">{{d}}</option>{% endfor %}
-            </select>
-        </div>
+        <input type="hidden" name="nonce" value="{{ nonce }}">
+        <input type="hidden" name="set_esperat" value="{{ set_actual }}">
+        <input type="hidden" name="xut_alçada" id="xut_alçada" value="">
+        <input type="hidden" name="xut_direccio" id="xut_direccio" value="">
+        <input type="hidden" name="aturada_alçada" id="aturada_alçada" value="">
+        <input type="hidden" name="aturada_direccio" id="aturada_direccio" value="">
 
-        <button type="submit">Enviar jugada</button>
+        <div class="submit-row">
+            <button type="submit" id="submit-btn" disabled>Enviar jugada</button>
+        </div>
     </form>
+
+    <script>
+        const shotAlcada = document.getElementById('xut_alçada');
+        const shotDireccio = document.getElementById('xut_direccio');
+        const saveAlcada = document.getElementById('aturada_alçada');
+        const saveDireccio = document.getElementById('aturada_direccio');
+        const submitBtn = document.getElementById('submit-btn');
+
+        document.querySelectorAll('.goal-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const grid = cell.closest('.goal-grid');
+                const target = grid.dataset.target;
+                const cls = target === 'shot' ? 'selected-shot' : 'selected-save';
+
+                if (cell.classList.contains(cls)) {
+                    cell.classList.remove(cls);
+                    if (target === 'shot') {
+                        shotAlcada.value = '';
+                        shotDireccio.value = '';
+                    } else {
+                        saveAlcada.value = '';
+                        saveDireccio.value = '';
+                    }
+                } else {
+                    grid.querySelectorAll('.' + cls).forEach(c => c.classList.remove(cls));
+                    cell.classList.add(cls);
+                    if (target === 'shot') {
+                        shotAlcada.value = cell.dataset.alçada;
+                        shotDireccio.value = cell.dataset.direccio;
+                    } else {
+                        saveAlcada.value = cell.dataset.alçada;
+                        saveDireccio.value = cell.dataset.direccio;
+                    }
+                }
+
+                submitBtn.disabled = !(shotAlcada.value && saveAlcada.value);
+            });
+        });
+    </script>
+    {% else %}
+        <div class="waiting-card card">
+            <p class="info">✅ Ja has enviat la teva jugada per aquest set.</p>
+            <p class="muted">Esperant que l'altre jugador faci la seva...</p>
+        </div>
+    {% endif %}
 
     <div class="nav">
         <form action="{{ url_for('resultat', codi=codi) }}"><button type="submit" class="secondary">Veure marcador</button></form>

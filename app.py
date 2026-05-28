@@ -1,14 +1,21 @@
+import json
 import random
+import secrets
 import string
-from flask import Flask, request, redirect, url_for, render_template, jsonify
+import time
+from flask import (Flask, request, redirect, url_for, render_template,
+                   jsonify, session, stream_with_context, Response)
 
 app = Flask(__name__)
+app.secret_key = "jocpenals-secret-2024"
 
 # partides[codi] = {
-#   "jugador1": [{"xut": (h,d), "aturada": (h,d)}, ...],  # sets jugats
-#   "jugador2": [{"xut": (h,d), "aturada": (h,d)}, ...],
-#   "total_sets": int,
-#   "resultats": None | [{"guanyador": ..., "punts_j1": int, "punts_j2": int}, ...]
+#   "jugador1": {"xut": (h,d), "aturada": (h,d)} o None,
+#   "jugador2": {...} o None,
+#   "sets": [ {"guanyador": "jugador1"/"jugador2"/"empat",
+#              "punts_j1": int,
+#              "punts_j2": int} ],
+#   "total_sets": int
 # }
 
 partides = {}
@@ -30,27 +37,6 @@ def calcular_punts(xut, aturada):
     return punts
 
 
-def resoldre_resultats(j1_sets, j2_sets):
-    resultats = []
-    for i in range(min(len(j1_sets), len(j2_sets))):
-        j1 = j1_sets[i]
-        j2 = j2_sets[i]
-        punts_j1 = calcular_punts(j2["xut"], j1["aturada"])
-        punts_j2 = calcular_punts(j1["xut"], j2["aturada"])
-        if punts_j1 > punts_j2:
-            guanyador = "jugador1"
-        elif punts_j2 > punts_j1:
-            guanyador = "jugador2"
-        else:
-            guanyador = "empat"
-        resultats.append({
-            "guanyador": guanyador,
-            "punts_j1": punts_j1,
-            "punts_j2": punts_j2
-        })
-    return resultats
-
-
 @app.route("/", methods=["GET", "POST"])
 def menu():
     error = None
@@ -61,10 +47,10 @@ def menu():
             codi = generar_codi()
             total_sets = int(request.form["sets"])
             partides[codi] = {
-                "jugador1": [],
-                "jugador2": [],
-                "total_sets": total_sets,
-                "resultats": None
+                "jugador1": None,
+                "jugador2": None,
+                "sets": [],
+                "total_sets": total_sets
             }
             return redirect(url_for("seleccio", codi=codi))
 
@@ -78,28 +64,40 @@ def menu():
     return render_template("menu.html", error=error)
 
 
-@app.route("/seleccio/<codi>")
+@app.route("/seleccio/<codi>", methods=["GET", "POST"])
 def seleccio(codi):
     partida = partides.get(codi)
     if not partida:
         return redirect(url_for("menu"))
+
+    if request.method == "POST":
+        rol = request.form.get("rol")
+        if rol in ("jugador1", "jugador2"):
+            session["rol"] = rol
+            session["codi"] = codi
+            return redirect(url_for(rol, codi=codi))
+
+    sets_jugats = len(partida["sets"])
     total = partida["total_sets"]
     return render_template(
         "seleccio.html",
         codi=codi,
-        sets_j1=len(partida["jugador1"]),
-        sets_j2=len(partida["jugador2"]),
+        sets_jugats=sets_jugats,
         total_sets=total
     )
 
 
 @app.route("/jugador1/<codi>", methods=["GET", "POST"])
 def jugador1(codi):
+    if session.get("rol") != "jugador1" or session.get("codi") != codi:
+        return redirect(url_for("seleccio", codi=codi))
     return gestionar_jugada(codi, "jugador1")
 
 
 @app.route("/jugador2/<codi>", methods=["GET", "POST"])
 def jugador2(codi):
+    if session.get("rol") != "jugador2" or session.get("codi") != codi:
+        return redirect(url_for("seleccio", codi=codi))
     return gestionar_jugada(codi, "jugador2")
 
 
@@ -108,32 +106,85 @@ def gestionar_jugada(codi, jugador):
     if not partida:
         return redirect(url_for("menu"))
 
+    error = None
+    jugada = partida[jugador]
+    sets_jugats = len(partida["sets"])
     total_sets = partida["total_sets"]
-    sets_actual = len(partida[jugador])
 
-    # Si ja ha jugat tots els sets, va al resultat
-    if sets_actual >= total_sets:
+    # Si ja s'han jugat tots els sets, anem directament al resultat
+    if sets_jugats >= total_sets:
         return redirect(url_for("resultat", codi=codi))
 
     if request.method == "POST":
-        xut = (request.form["xut_alçada"], request.form["xut_direccio"])
-        aturada = (request.form["aturada_alçada"], request.form["aturada_direccio"])
-        partida[jugador].append({"xut": xut, "aturada": aturada})
-        sets_actual += 1
+        # Validar nonce per evitar resubmissió
+        nonce_esperat = partida.pop(f"{jugador}_nonce", None)
+        nonce_rebut = request.form.get("nonce")
+        if nonce_rebut != nonce_esperat:
+            error = "Aquest formulari ha caducat. Torna a obrir la pàgina."
+        elif jugada is not None:
+            error = "Ja has enviat la teva jugada en aquest set."
+        else:
+            # Validar que el set encara és l'actual
+            try:
+                set_esperat = int(request.form.get("set_esperat", 0))
+            except (ValueError, TypeError):
+                set_esperat = 0
+            if set_esperat != sets_jugats + 1:
+                error = "El set ha canviat. Torna a carregar la pàgina."
+            else:
+                xut = (request.form["xut_alçada"], request.form["xut_direccio"])
+                aturada = (request.form["aturada_alçada"], request.form["aturada_direccio"])
+                partida[jugador] = {"xut": xut, "aturada": aturada}
+                jugada = partida[jugador]
 
-        # Si ja ha acabat tots els sets, va al resultat
-        if sets_actual >= total_sets:
+        # Si tots dos han jugat, tanquem el set
+        if partida["jugador1"] and partida["jugador2"]:
+            j1 = partida["jugador1"]
+            j2 = partida["jugador2"]
+
+            punts_j1 = calcular_punts(j2["xut"], j1["aturada"])
+            punts_j2 = calcular_punts(j1["xut"], j2["aturada"])
+
+            if punts_j1 > punts_j2:
+                guanyador = "jugador1"
+            elif punts_j2 > punts_j1:
+                guanyador = "jugador2"
+            else:
+                guanyador = "empat"
+
+            partida["sets"].append({
+                "guanyador": guanyador,
+                "punts_j1": punts_j1,
+                "punts_j2": punts_j2
+            })
+
+            # Preparem següent set
+            partida["jugador1"] = None
+            partida["jugador2"] = None
+            partida.pop("jugador1_nonce", None)
+            partida.pop("jugador2_nonce", None)
+
+            # Anem a resultat per mostrar el resultat del set
             return redirect(url_for("resultat", codi=codi))
 
-        return redirect(url_for(jugador, codi=codi))
+    # Generar nonce fresc per al formulari (només si es mostrarà el formulari)
+    if jugada is None:
+        nonce = secrets.token_hex(8)
+        partida[f"{jugador}_nonce"] = nonce
+    else:
+        nonce = None
 
     return render_template(
         "jugador.html",
         jugador=jugador,
         alçades=ALÇADES,
         direccions=DIRECCIONS,
-        set_actual=sets_actual + 1,
-        total_sets=total_sets
+        jugada=jugada,
+        error=error,
+        codi=codi,
+        set_actual=sets_jugats + 1,
+        total_sets=total_sets,
+        nonce=nonce
     )
 
 
@@ -149,38 +200,34 @@ def resultat(codi):
 
 @app.route("/reset/<codi>")
 def reset(codi):
+    session.pop("rol", None)
+    session.pop("codi", None)
     partida = partides.get(codi)
     if partida:
         total_sets = partida["total_sets"]
         partides[codi] = {
-            "jugador1": [],
-            "jugador2": [],
-            "total_sets": total_sets,
-            "resultats": None
+            "jugador1": None,
+            "jugador2": None,
+            "sets": [],
+            "total_sets": total_sets
         }
     return redirect(url_for("seleccio", codi=codi))
 
 
-@app.route("/api/estat/<codi>")
-def api_estat(codi):
-    partida = partides.get(codi)
-    if not partida:
-        return jsonify({"error": "Partida no trobada"}), 404
-
+def build_estat(codi, partida):
+    """Calcula l'estat actual de la partida."""
+    sets = partida["sets"]
     total_sets = partida["total_sets"]
-    j1_fet = len(partida["jugador1"]) >= total_sets
-    j2_fet = len(partida["jugador2"]) >= total_sets
+    j1_te_jugada = partida["jugador1"] is not None
+    j2_te_jugada = partida["jugador2"] is not None
 
-    if j1_fet and j2_fet and partida["resultats"] is None:
-        partida["resultats"] = resoldre_resultats(partida["jugador1"], partida["jugador2"])
+    vict_j1 = sum(1 for s in sets if s["guanyador"] == "jugador1")
+    vict_j2 = sum(1 for s in sets if s["guanyador"] == "jugador2")
 
-    sets = partida["resultats"] if partida["resultats"] is not None else []
-    finalitzat = partida["resultats"] is not None
-
-    vict_j1 = sum(1 for s in sets if s["guanyador"] == "jugador1") if sets else 0
-    vict_j2 = sum(1 for s in sets if s["guanyador"] == "jugador2") if sets else 0
+    finalitzat = len(sets) >= total_sets
 
     if finalitzat:
+        guanyador_text = None
         if vict_j1 > vict_j2:
             guanyador_text = "Guanya el Jugador 1!"
         elif vict_j2 > vict_j1:
@@ -190,27 +237,78 @@ def api_estat(codi):
     else:
         guanyador_text = None
 
-    if j1_fet and j2_fet:
+    if finalitzat:
+        esperant_jugador = False
+        set_acabat = False
         estat_text = "Partida finalitzada!"
-    elif j1_fet:
-        estat_text = "Jugador 1 ha acabat. Esperant Jugador 2..."
-    elif j2_fet:
-        estat_text = "Jugador 2 ha acabat. Esperant Jugador 1..."
+    elif j1_te_jugada and j2_te_jugada:
+        esperant_jugador = False
+        set_acabat = True
+        estat_text = "Set completat!"
+    elif j1_te_jugada or j2_te_jugada:
+        esperant_jugador = True
+        set_acabat = False
+        qui = "Jugador 1" if j1_te_jugada else "Jugador 2"
+        estat_text = f"{qui} ha enviat la seva jugada. Esperant l'altre..."
+    elif len(sets) > 0:
+        esperant_jugador = False
+        set_acabat = True
+        estat_text = f"Set {len(sets)} completat!"
     else:
-        estat_text = "Tots dos jugadors estan jugant..."
+        esperant_jugador = False
+        set_acabat = False
+        estat_text = "Esperant jugadors..."
 
-    return jsonify({
+    te_toca = False
+    rol = session.get("rol")
+    if not finalitzat and rol in ("jugador1", "jugador2") and session.get("codi") == codi:
+        if partida[rol] is None:
+            te_toca = True
+
+    return {
         "sets": sets,
         "total_sets": total_sets,
         "vict_j1": vict_j1,
         "vict_j2": vict_j2,
         "finalitzat": finalitzat,
         "guanyador_text": guanyador_text,
+        "esperant_jugador": esperant_jugador,
+        "set_acabat": set_acabat,
         "estat_text": estat_text,
-        "j1_fet": j1_fet,
-        "j2_fet": j2_fet
-    })
+        "te_toca": te_toca
+    }
+
+
+@app.route("/api/estat/<codi>")
+def api_estat(codi):
+    partida = partides.get(codi)
+    if not partida:
+        return jsonify({"error": "Partida no trobada"}), 404
+    return jsonify(build_estat(codi, partida))
+
+
+@app.route("/api/stream/<codi>")
+def api_stream(codi):
+    def generate():
+        last = None
+        while True:
+            partida = partides.get(codi)
+            if not partida:
+                yield "event: reload\ndata: {}\n\n"
+                return
+            state = build_estat(codi, partida)
+            payload = json.dumps(state)
+            if payload != last:
+                yield f"event: update\ndata: {payload}\n\n"
+                last = payload
+            time.sleep(0.5)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+    )
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)

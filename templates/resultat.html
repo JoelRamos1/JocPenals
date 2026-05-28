@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Resultat â€“ Partida {{ codi }}</title>
+    <title>Resultat – Partida {{ codi }}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -27,67 +27,63 @@
     <p id="winner_text" class="winner" style="display:none;"></p>
 
     <h2 id="sets_header" style="display:none;">Detall de sets</h2>
-    <div id="set_container" class="set-grid">
-        <!-- Targetes de sets generades per JS -->
+    <div id="set_container" class="set-grid"></div>
+
+    <p id="no_sets" class="muted" style="display:none;">Encara no s'ha jugat cap set.</p>
+
+    <div id="next-set-row" class="nav" style="display:none;">
+        {% if session.get('rol') and session.get('codi') == codi %}
+        <form action="{{ url_for(session.rol, codi=codi) }}">
+            <button type="submit">Següent set →</button>
+        </form>
+        {% else %}
+        <form action="{{ url_for('seleccio', codi=codi) }}">
+            <button type="submit" class="secondary">Seleccionar jugador</button>
+        </form>
+        {% endif %}
     </div>
 
-    <p id="no_sets" class="muted" style="display:none;">Esperant l'altre jugador...</p>
-
     <div class="nav">
-        <form action="{{ url_for('seleccio', codi=codi) }}"><button type="submit" class="secondary">Tornar a selecciÃ³</button></form>
+        <form action="{{ url_for('seleccio', codi=codi) }}"><button type="submit" class="secondary">Tornar a selecció</button></form>
         <form action="{{ url_for('reset', codi=codi) }}"><button type="submit">Reiniciar partida</button></form>
-        <form action="{{ url_for('menu') }}"><button type="submit" class="ghost">MenÃº inicial</button></form>
+        <form action="{{ url_for('menu') }}"><button type="submit" class="ghost">Menú inicial</button></form>
     </div>
 </div>
 
 <script>
-async function refrescarMarcador() {
-    try {
-        const res = await fetch("{{ url_for('api_estat', codi=codi) }}");
-        if (!res.ok) {
-            document.getElementById("progress_text").innerText = "Error carregant l'estat de la partida.";
-            return;
-        }
-        const data = await res.json();
+function refrescarMarcador(data) {
+    // Marcador global
+    document.getElementById("score_j1").innerText = data.vict_j1;
+    document.getElementById("score_j2").innerText = data.vict_j2;
 
-        // Actualitzar marcador global
-        document.getElementById("score_j1").innerText = data.vict_j1;
-        document.getElementById("score_j2").innerText = data.vict_j2;
+    // Text d'estat
+    const progress = document.getElementById("progress_text");
+    const winner = document.getElementById("winner_text");
 
-        // Text de progrÃ©s / final
-        const progress = document.getElementById("progress_text");
-        const winner = document.getElementById("winner_text");
-
+    if (data.te_toca && data.estat_text !== "Partida finalitzada!") {
+        progress.innerText = "És el teu torn! Fes la teva jugada.";
+    } else {
         progress.innerText = data.estat_text || "Carregant...";
+    }
 
-        if (data.finalitzat) {
-            if (data.guanyador_text) {
-                winner.innerText = data.guanyador_text;
-                winner.style.display = "block";
-            }
-        } else {
-            winner.style.display = "none";
-        }
+    if (data.finalitzat && data.guanyador_text) {
+        winner.innerText = data.guanyador_text;
+        winner.style.display = "block";
+    } else {
+        winner.style.display = "none";
+    }
 
-        // Targetes de sets
-        const cont = document.getElementById("set_container");
-        const setsHeader = document.getElementById("sets_header");
-        cont.innerHTML = "";
+    // Targetes de sets
+    const cont = document.getElementById("set_container");
+    const setsHeader = document.getElementById("sets_header");
+    const noSets = document.getElementById("no_sets");
+    cont.innerHTML = "";
 
-        if (data.finalitzat) {
-            setsHeader.style.display = "block";
-            if (data.sets.length === 0) {
-                document.getElementById("no_sets").style.display = "block";
-            } else {
-                document.getElementById("no_sets").style.display = "none";
-            }
-        } else {
-            setsHeader.style.display = "none";
-            document.getElementById("no_sets").style.display = "block";
-        }
+    if (data.sets.length > 0) {
+        setsHeader.style.display = "block";
+        noSets.style.display = "none";
 
         data.sets.forEach((s, i) => {
-            // Classes per als punts tipus penals
             let j1DotClass = "draw";
             let j2DotClass = "draw";
             if (s.guanyador === "jugador1") {
@@ -100,6 +96,9 @@ async function refrescarMarcador() {
 
             const card = document.createElement("div");
             card.className = "set-card";
+            if (i === data.sets.length - 1 && data.set_acabat) {
+                card.classList.add("set-card-latest");
+            }
             card.innerHTML = `
                 <div class="set-header">Set ${i + 1}</div>
                 <div class="set-body">
@@ -119,16 +118,27 @@ async function refrescarMarcador() {
             `;
             cont.appendChild(card);
         });
-
-    } catch (e) {
-        console.error(e);
-        document.getElementById("progress_text").innerText = "Error de connexiÃ³ amb el servidor.";
+    } else {
+        setsHeader.style.display = "none";
+        noSets.style.display = "block";
     }
+
+    // Botó "Següent set"
+    const nextRow = document.getElementById("next-set-row");
+    nextRow.style.display = (data.te_toca || (data.set_acabat && !data.finalitzat)) ? "flex" : "none";
 }
 
-// Refrescar cada 1.5 segons
-refrescarMarcador();
-setInterval(refrescarMarcador, 1500);
+// SSE — una connexió persistent en lloc de polling
+const source = new EventSource("{{ url_for('api_stream', codi=codi) }}");
+source.addEventListener("update", (event) => {
+    refrescarMarcador(JSON.parse(event.data));
+});
+source.addEventListener("reload", () => {
+    window.location.href = "{{ url_for('menu') }}";
+});
+source.addEventListener("error", () => {
+    document.getElementById("progress_text").innerText = "Error de connexió amb el servidor.";
+});
 </script>
 
 </body>

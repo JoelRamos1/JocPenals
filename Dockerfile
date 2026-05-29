@@ -11,4 +11,4 @@ ENV SECRET_KEY=canvia-aquesta-clau
 
 EXPOSE 5000
 
-CMD ["waitress-serve", "--port=5000", "app:app"]
+CMD ["gunicorn", "-k", "gevent", "-w", "1", "-b", "0.0.0.0:5000", "app:app"]

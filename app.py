@@ -311,6 +311,12 @@ def api_stream(codi):
     )
 
 
+@app.after_request
+def treure_connection_header(response):
+    response.headers.pop("Connection", None)
+    return response
+
+
 if __name__ == "__main__":
     dev = os.environ.get("FLASK_ENV") == "development"
     app.run(host="0.0.0.0", port=5000, debug=dev, threaded=True)
